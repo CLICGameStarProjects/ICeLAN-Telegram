@@ -93,7 +93,9 @@ class Storage:
             if anim not in self.storage[player]:
                 if anim not in self.anims:
                     self.anims.add(anim)
-            self.storage[player][anim] = points or 0
+                self.storage[player][anim] = points or 0
+            elif points != None:
+                self.storage[player][anim] += points
 
 
     def remove(self, player: str, anim: str=None) -> None:
@@ -386,12 +388,15 @@ async def info(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if len(context.args) > 0:
         player = sanitize_player((context.args[0]))
         if player not in storage.players:
-            message = "❌ Le JOUEUR n'existe pas encore dans la base de donnée ❌"
+            message = f"❌ {player} n'existe pas encore dans la base de donnée ❌"
         else:
             if len(context.args) > 1:
                 anim = sanitize_anim(' '.join(context.args[1:]))
-                points = storage.read(player, anim)
-                message = f"[{anim}] {player} - {points}pts"
+                if anim not in storage.read(player):
+                    message = f"❌ {player} n'est pas inscrit à l'ANIMATION {anim} ❌"
+                else:
+                    points = storage.read(player, anim)
+                    message = f"[{anim}] {player} - {points}pts"
             else:
                 anims_points = storage.read(player)
                 message = f"🧮 ANIMATIONS et POINTS de {player} 🧮\n\n"
