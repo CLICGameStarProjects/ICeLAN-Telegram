@@ -392,7 +392,9 @@ async def info(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         else:
             if len(context.args) > 1:
                 anim = sanitize_anim(' '.join(context.args[1:]))
-                if anim not in storage.read(player):
+                if anim not in storage.anims:
+                    message = f"❌ L'ANIMATION {anim} n'existe pas ❌"
+                elif anim not in storage.read(player):
                     message = f"❌ {player} n'est pas inscrit à l'ANIMATION {anim} ❌"
                 else:
                     points = storage.read(player, anim)
