@@ -496,7 +496,7 @@ async def remove_proceed(update, context):
 
     else:
         await update.message.reply_text(
-            "👌 Annulation de la suppresion. 👌",
+            "👌 Annulation de la suppresion 👌",
             reply_markup=ReplyKeyboardRemove()
         )
         return ConversationHandler.END
