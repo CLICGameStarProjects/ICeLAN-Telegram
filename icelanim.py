@@ -495,7 +495,7 @@ async def remove_proceed(update, context):
         return REMOVE_REPLY
 
     else:
-        await update.message.text_reply(
+        await update.message.reply_text(
             "👌 Annulation de la suppresion. 👌",
             reply_markup=ReplyKeyboardRemove()
         )
@@ -589,7 +589,7 @@ async def remove_player_reply(update, context):
 
 async def cancel(update, context):
     await update.message.reply_text(
-        "😐 Tu as entré une commande alors qu'une conversation était en cours. La conversation a donc été interrompue 😐",
+        "😐 Tu as entré une commande alors qu'une autre était en cours. La commande précédente a donc été interrompue 😐",
         reply_markup=ReplyKeyboardRemove()
     )
     return ConversationHandler.END
