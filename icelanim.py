@@ -336,8 +336,9 @@ async def save(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     anim = context.user_data["anim"]
     storage.add(player, anim, points)
     storage.save()
+    total_points = storage.read(player, anim)
     await update.message.reply_text(
-        f"👌 Les résultats ont été sauvés avec succès 👌\n\n[{anim}] {player} - {points}pts"
+        f"👌 Les résultats ont été sauvés avec succès 👌\n\n[{anim}] {player} - {total_points}pts"
     )
     return ConversationHandler.END
 
@@ -388,7 +389,7 @@ async def status(update, context):
 
 async def info(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if len(context.args) > 0:
-        player = sanitize_player((context.args[0]))
+        player = sanitize_player(context.args[0])
         if player not in storage.players:
             message = f"❌ {player} n'existe pas encore dans la base de donnée ❌"
         else:
@@ -405,7 +406,7 @@ async def info(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
                 anims_points = list(storage.read(player))
                 if len(anims_points):
                     message = f"🧮 ANIMATIONS et POINTS de {player} 🧮\n\n"
-                    message += "\n".join(f"[{a}] {points}pts" for a, points in anims_points.items())
+                    message += "\n".join(f"[{a}] {points}pts" for a, points in anims_points)
                 else:
                     message = f"❌ {player} n'est inscrit à aucune ANIMATION ❌"
     else:
