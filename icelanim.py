@@ -2,6 +2,7 @@ import logging
 import os
 import base64
 from typing import List
+from operator import itemgetter
 
 from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import (
@@ -191,7 +192,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
             storage.add(player)
             storage.save()
             await update.message.reply_text(
-                "Le joueur n'existait pas dans la base de donnée, il vient d'y être ajouté."
+                f"{player} n'existait pas dans la base de donnée, il vient d'y être ajouté."
             )
 
         context.user_data["player"] = player
@@ -204,9 +205,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
             reply_markup = ReplyKeyboardMarkup(keyboard)
 
             await update.message.reply_text(
-                f"Choisir l'animation avec le clavier apparu à l'écran.",
+                f"{player} est inscrit aux ANIMATIONS suivantes.\n\n> Tu peux choisir une de ces ANIMATIONS ou entrer le nom d'une autre ANIMATION et choisir d'y inscrire le joueur.",
                 reply_markup=reply_markup
             )
+
+            context.user_data["existing_anim"] = True
             return POINTS
 
         else:
@@ -214,7 +217,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
             keyboard = build_keyboard(["Oui", "Non"], 2)
 
             await update.message.reply_text(
-                "Le joueur n'est inscrit à aucune animation. Veux-tu l'inscrire à une animation ? Si l'animation rentrée n'existe pas encore, elle sera créée à la volée.",
+                f"❌ {player} n'est inscrit à aucune ANIMATION ❌\n\n> Veux-tu l'inscrire à une ANIMATION ? Si l'ANIMATION rentrée n'existe pas encore, elle sera créée à la volée.",
                 reply_markup=ReplyKeyboardMarkup(keyboard)
             )
 
@@ -223,7 +226,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
             return CREATE_ANIM
 
     else:
-        await update.message.reply_text("Entrer le nom du joueur :")
+        await update.message.reply_text("> Entrer le nom du JOUEUR :")
         return ANIM
 
 
@@ -242,7 +245,7 @@ async def pick_anim(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
             context.user_data["existing_anim"] = True
 
             await update.message.reply_text(
-                f"{player} est inscrit aux animations suivantes. Tu peux choisir une de ces animations ou entrer le nom d'une autre animation et choisir d'y inscrire le joueur.",
+                f"{player} est inscrit aux ANIMATIONS suivantes.\n\n> Tu peux choisir une de ces animations ou entrer le nom d'une autre animation et choisir d'y inscrire le joueur.",
                 reply_markup=reply_markup
             )
 
@@ -253,7 +256,7 @@ async def pick_anim(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
             keyboard = build_keyboard(["Oui", "Non"], 2)
 
             await update.message.reply_text(
-                "Le joueur n'est inscrit à aucune animation. Veux-tu l'inscrire à une animation ? Si l'animation rentrée n'existe pas encore, elle sera créée à la volée.",
+                f"❌ {player} n'est inscrit à aucune ANIMATION ! ❌\n\n> Veux-tu l'inscrire à une animation ? Si l'animation rentrée n'existe pas encore, elle sera créée à la volée.",
                 reply_markup=ReplyKeyboardMarkup(keyboard)
             )
 
@@ -261,7 +264,7 @@ async def pick_anim(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
     else:
         await update.message.reply_text(
-            "Le joueur n'existe pas encore dans la base de donnée. Tu peux l'ajouter manuellement avec la commande /register."
+            f"❌ {player} n'existe pas encore dans la base de donnée ! ❌\n\nTu peux l'ajouter manuellement avec la commande /register."
         )
 
         return ConversationHandler.END
@@ -270,10 +273,10 @@ async def pick_anim(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 async def create_anim(update, context):
     if update.message.text.lower() == "oui":
         player = context.user_data["player"]
-        await update.message.reply_text(f"Entrer le nom de l'animation à laquelle inscrire {player}.")
+        await update.message.reply_text(f"> Entrer le nom de l'ANIMATION à laquelle inscrire {player} :")
         return POINTS
     else:
-        await update.message.reply_text(f"{player} n'a été inscrit à aucune animation.")
+        await update.message.reply_text(f"👌 {player} n'a été inscrit à aucune ANIMATION 👌")
         return ConversationHandler.END
 
 
@@ -281,8 +284,8 @@ async def add_to_anim(update, context):
     if update.message.text.lower() == "oui":
         player = context.user_data["player"]
         anim = context.user_data["anim"]
-        await update.message.reply_text(f"{player} a été inscrit à l'animation {anim}.", reply_markup=ReplyKeyboardRemove())
-        await update.message.reply_text(f"Entrer les points reçus par le joueur {player} au sein de l'animation {anim} :")
+        await update.message.reply_text(f"👌 {player} a été inscrit à l'ANIMATION {anim} 👌", reply_markup=ReplyKeyboardRemove())
+        await update.message.reply_text(f"> Entrer les points reçus par {player} à l'ANIMATION {anim} :")
         return SAVE
     else:
         await update.message.reply_text(f"{player} n'a pas été inscrit à l'animation. Rien n'a été fait.")
@@ -300,7 +303,7 @@ async def enter_points(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
             keyboard = build_keyboard(["Oui", "Non"], 2)
 
             await update.message.reply_text(
-                "Le joueur n'est pas inscrit à l'animation. Veux-tu l'inscrire à l'animation ?",
+                f"❌ {player} n'est pas inscrit à l'ANIMATION {anim} ❌\n\n> Veux-tu l'inscrire à l'ANIMATION ?",
                 reply_markup=ReplyKeyboardMarkup(keyboard)
             )
 
@@ -310,11 +313,11 @@ async def enter_points(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
             storage.save()
 
             await update.message.reply_text(
-                f"Le joueur {player} a été ajouté à l'animation {anim}."
+                f"{player} a été ajouté à l'ANIMATION {anim}."
             )
     
     await update.message.reply_text(
-        f"Entrer les points reçus par le joueur {player} au sein de l'animation {anim} :",
+        f"Entrer les points reçus par {player} à de l'ANIMATION {anim} :",
         reply_markup=ReplyKeyboardRemove()
     )
 
@@ -325,26 +328,39 @@ async def save(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     try:
         points = int(update.message.text.strip())
     except:
-        await update.message.reply_text("Les points doivent être des nombres ! Re-rentrer les points :")
+        await update.message.reply_text("❌ Les points doivent être des nombres ❌\n\n> Re-rentrer les points :")
         return SAVE
     player = context.user_data["player"]
     anim = context.user_data["anim"]
     storage.add(player, anim, points)
     storage.save()
     await update.message.reply_text(
-        f"Les résultats ont été sauvés avec succès !\n\n[{anim}] {player} - {points}pts"
+        f"👌 Les résultats ont été sauvés avec succès 👌\n\n[{anim}] {player} - {points}pts"
     )
     return ConversationHandler.END
 
 
+async def list_players(update, context):
+    players = list(storage.players)
+    if len(players):
+        message = "👤 Liste des JOUEURS 👤\n\n"
+        message += "\n".join(",  ".join(line) for line in zip(players[::2], players[1::2]))
+        if len(players) % 2 == 1:
+            message += f"\n{players[-1]}"
+    else:
+        message = "❌ Aucun JOUEUR n'a encore été enregistrée ! ❌"
+    await update.message.reply_text(message)
+
+
 async def list_anims(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     anims = list(set(a for a_p in storage.storage.values() for a in a_p.keys()))
-    if len(anims) > 1:
-        message = "Liste des animations :\n\n" + "\n".join(", ".join(line) for line in zip(anims[::2], anims[1::2]))
-    elif len(anims) == 1:
-        message = f"Liste des animations :\n\n{anims[0]}"
+    if len(anims):
+        message = "🏆 Liste des ANIMATIONS 🏆\n\n"
+        message += "\n".join(",  ".join(line) for line in zip(anims[::2], anims[1::2]))
+        if len(anims) % 2 == 1:
+            message += f"\n{anims[0]}"
     else:
-        message = "Aucune animation n'a été enregistrée pour le moment."
+        message = "❌ Aucune ANIMATION n'a encore été enregistrée ! ❌"
     await update.message.reply_text(message)
 
 
@@ -352,13 +368,17 @@ async def status(update, context):
     if len(context.args) > 0:
         anim = sanitize_anim(' '.join(context.args))
         if anim not in storage.anims:
-            message = "L'animation n'a pas encore été enregistrée."
+            message = "❌ L'ANIMATION n'a pas encore été enregistrée ❌"
         else:
-            players_points = storage.read(anim=anim)
-            message = f"Liste des points de l'animation {anim}\n\n"
-            message += "\n".join(f"{player} - {points}pts" for player, points in players_points.items())
+            players_points = list(storage.read(anim=anim).items())
+            players_points.sort(key=itemgetter(1), reverse=True)
+            ranking = [f"{idx + 1}. {player} - {points}pts" for idx, (player, points) in enumerate(players_points)]
+            medals = ["🥇",  "🥈", "🥉"]
+            fancy_ranking = [f"{rank} {medal}" for medal, rank in zip(medals, ranking[:3])] + ranking[3:]
+            message = f"🧮 [{anim}] Classement 🧮\n\n"
+            message += "\n".join(fancy_ranking)
     else:
-        message = "Il faut spécifier une animation !"
+        message = "❌ Il faut spécifier une ANIMATION ❌"
     await update.message.reply_text(message)
 
 
@@ -366,7 +386,7 @@ async def info(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if len(context.args) > 0:
         player = sanitize_player((context.args[0]))
         if player not in storage.players:
-            message = "Le joueur n'existe pas encore dans la base de donnée."
+            message = "❌ Le JOUEUR n'existe pas encore dans la base de donnée ❌"
         else:
             if len(context.args) > 1:
                 anim = sanitize_anim(' '.join(context.args[1:]))
@@ -374,15 +394,15 @@ async def info(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
                 message = f"[{anim}] {player} - {points}pts"
             else:
                 anims_points = storage.read(player)
-                message = f"Liste des points du joueur {player}\n\n"
+                message = f"🧮 ANIMATIONS et POINTS de {player} 🧮\n\n"
                 message += "\n".join(f"[{a}] {points}pts" for a, points in anims_points.items())
     else:
-        message = "Il faut spécifier un joueur et (éventuellement) une animation !"
+        message = "❌ Il faut spécifier un JOUEUR et (éventuellement) une ANIMATION ❌"
     await update.message.reply_text(message)
 
 
 async def register_player(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await update.message.reply_text("Entrer le nom du joueur :")
+    await update.message.reply_text("Entrer le nom du JOUEUR :")
 
     return ADD_ANIM
 
@@ -396,12 +416,12 @@ async def add_anim(update, context):
         storage.add(player)
         storage.save()
         await update.message.reply_text(
-            f"Le joueur {player} a été ajouté à la base de donnée avec succès ! Veux-tu l'inscrire à une animation par la même occasion ? L'animation n'a pas besoin de déjà exister.",
+            f"👌 Le joueur {player} a été ajouté à la base de donnée avec succès 👌\n\n> Veux-tu l'inscrire à une animation par la même occasion ? L'animation n'a pas besoin de déjà exister.",
             reply_markup=ReplyKeyboardMarkup(keyboard)
         )
     else:
         await update.message.reply_text(
-            f"Le joueur {player} existe déjà. Veux-tu l'inscrire à une animation ? L'animation n'a pas besoin d'exister.",
+            f"👌 Le joueur {player} existe déjà 👌\n\n> Veux-tu l'inscrire à une animation ? L'animation n'a pas besoin d'exister.",
             reply_markup=ReplyKeyboardMarkup(keyboard)
         )
 
@@ -411,13 +431,13 @@ async def add_anim(update, context):
 async def add_anim_reply(update, context):
     if update.message.text.lower() == "oui":
         await update.message.reply_text(
-            "Entrer le nom de l'animation :",
+            "> Entrer le nom de l'ANIMATION :",
             reply_markup=ReplyKeyboardRemove()
         )
         return REGISTER_ANIM
     else:
         await update.message.reply_text(
-            f"Le joueur n'a été ajouté à aucune animation. Il te faudra rappeler cette commande afin de pouvoir l'inscrire à une animation.",
+            f"👌 Le JOUEUR n'a été ajouté à aucune ANIMATION. Il te faudra rappeler cette commande afin de pouvoir l'inscrire à une ANIMATION 👌",
             reply_markup=ReplyKeyboardRemove()
         )
         return ConversationHandler.END
@@ -430,7 +450,7 @@ async def register_anim(update, context):
     storage.save()
 
     await update.message.reply_text(
-        f"Le joueur {player} a été ajouté à l'animation {anim} avec succès ! Tu peux maintenant lui ajouter des points avec la commande /start."
+        f"👌 {player} a été ajouté à l'ANIMATION {anim} avec succès ! 👌\n\nTu peux maintenant lui ajouter des points avec la commande /start."
     )
 
     return ConversationHandler.END
@@ -440,9 +460,10 @@ async def remove(update, context):
     keyboard = build_keyboard(["Oui", "Non"], 2)
     await update.message.reply_text(
         """
-ATTENTION : Cette commande est dangereuse ! Continue seulement si tu sais ce que tu fais. Contacter Hugo (@billjobs42) ou Stache (@Stache) en cas de besoin.
+🚨 ATTENTION 🚨
+Cette commande est dangereuse ! Continue seulement si tu sais ce que tu fais. Contacter Hugo (@billjobs42) ou Stache (@Stache) en cas de besoin.
 
-Continuer malgré tout?
+> Continuer malgré tout?
         """,
         reply_markup=ReplyKeyboardMarkup(keyboard)
     )
@@ -453,14 +474,14 @@ async def remove_proceed(update, context):
     if update.message.text.lower() == "oui":
         keyboard = build_keyboard(["Joueur", "Inscription"], 2)
         await update.message.reply_text(
-            "Qu'est-ce que tu voudrais supprimer ?",
+            "> Qu'est-ce que tu voudrais supprimer ?",
             reply_markup=ReplyKeyboardMarkup(keyboard)
         )
         return REMOVE_REPLY
 
     else:
         await update.message_reply(
-            "Annulation de la suppresion.",
+            "👌 Annulation de la suppresion. 👌",
             reply_markup=ReplyKeyboardRemove()
         )
         return ConversationHandler.END
@@ -472,9 +493,10 @@ async def remove_reply(update, context):
     if reply == "joueur":
         await update.message.reply_text(
             """
-ATTENTION : Tu t'apprêtes à supprimer un joueur de la base de donnée. Ça aura pour effet de supprimer tous ses scores à toutes ses animations.
+🚨 ATTENTION 🚨
+Tu t'apprêtes à supprimer un JOUEUR de la base de donnée. Ça aura pour effet de supprimer tous ses scores à toutes ses ANIMATIONS.
 
-Quel joueur souhtaites-tu supprimer ?
+> Quel JOUEUR souhaites-tu supprimer ?
             """,
             reply_markup=ReplyKeyboardRemove()
         )
@@ -482,9 +504,10 @@ Quel joueur souhtaites-tu supprimer ?
     elif reply == "inscription":
         await update.message.reply_text(
             """
-ATTENTION : Tu t'apprêtes à désinscrire un joueur d'une animation. Ça aura pour effet de supprimer ses points obtenus à l'animation.
+🚨 ATTENTION 🚨
+Tu t'apprêtes à désinscrire un joueur d'une ANIMATION. Ça aura pour effet de supprimer ses points obtenus à l'ANIMATION.
             
-Quel joueur souhaites-tu désinscrire ?
+> Quel JOUEUR souhaites-tu désinscrire ?
             """,
             reply_markup=ReplyKeyboardRemove()
         )
@@ -499,7 +522,7 @@ async def remove_anim_reply_player(update, context):
 
     if player not in storage.players:
         await update.message.reply_text(
-            f"Le joueur {player} n'existe pas encore dans la base de donnée. Rien n'a été fait."
+            f"❌ {player} n'existe pas encore dans la base de donnée. Rien n'a été fait. ❌"
         )
         return ConversationHandler.END
 
@@ -507,7 +530,7 @@ async def remove_anim_reply_player(update, context):
 
     keyboard = build_keyboard(list(storage.read(player=player).keys()))
     await update.message.reply_text(
-        f"De quelle animation faut-il désincrire {player} ?",
+        f"> De quelle ANIMATION faut-il désincrire {player} ?",
         reply_markup=ReplyKeyboardMarkup(keyboard)
     )
 
@@ -519,13 +542,13 @@ async def remove_anim_reply_anim(update, context):
 
     if anim not in storage.anims:
         await update.message.reply_text(
-            f"Le joueur {player} n'est pas encore inscrit à l'animation {anim}. Rien a été fait.",
+            f"❌ {player} n'est pas encore inscrit à l'ANIMATION {anim}. Rien a été fait. ❌",
             reply_markup=ReplyKeyboardRemove()
         )
     else:
         storage.remove(player, anim)
         await update.message.reply_text(
-            f"Le joueur {player} a été désinscrit de l'animation {anim} avec succès !",
+            f"👌 {player} a été désinscrit de l'ANIMATION {anim} avec succès 👌",
             reply_markup=ReplyKeyboardRemove()
         )
 
@@ -537,14 +560,13 @@ async def remove_player_reply(update, context):
 
     if player not in storage.players:
         await update.message.reply_text(
-            f"Le joueur {player} n'existe pas encore dans la base de donnée. Rien n'a été fait."
+            f"❌ {player} n'existe pas encore dans la base de donnée. Rien n'a été fait ❌"
         )
-        return ConversationHandler.END
     else:
         storage.remove(player)
         storage.save()
         await update.message.reply_text(
-            f"Le joueur {player} a été supprimé de la base de donnée avec succès !"
+            f"👌 {player} a été supprimé de la base de donnée avec succès 👌"
         )
 
     return ConversationHandler.END
@@ -552,7 +574,7 @@ async def remove_player_reply(update, context):
 
 async def cancel(update, context):
     await update.message.reply_text(
-        "Tu as entré une commande alors qu'une conversation était en cours. La conversation a donc été interrompue.",
+        "😐 Tu as entré une commande alors qu'une conversation était en cours. La conversation a donc été interrompue 😐",
         reply_markup=ReplyKeyboardRemove()
     )
     return ConversationHandler.END
@@ -606,6 +628,7 @@ def main() -> None:
     )
     application.add_handler(remove_conv_handler)
 
+    application.add_handler(CommandHandler("players", list_players), 1)
     application.add_handler(CommandHandler("anims", list_anims), 1)
     application.add_handler(CommandHandler("info", info), 1)
     application.add_handler(CommandHandler("status", status), 1)
