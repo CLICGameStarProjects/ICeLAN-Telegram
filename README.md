@@ -25,9 +25,8 @@ The `.code` file contains the event's edition secret code for NFC cards.
 ### _Read_ commands
 
 - `/anims`: list all existing animations
-- `/anims <player>`: list all animations that `player` joined
-- `/points <player> <anim>`: return points obtained by `player` in `anim`
-- `/points <player>`: return all anims joined by `player` along with the points they obtained
+- `/info <player>`: return all anims joined by `player` along with the points they obtained
+- `/info <player> <anim>`: return points obtained by `player` in `anim`
 - `/status <anim>`: list players enrolled in `anim` along with their points
 
 ### _Write_ commands
