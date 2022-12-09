@@ -18,8 +18,6 @@ The `.admins` file is optional and contains the list of Telegram user IDs (one p
 If the file exists and is non-empty, then _write_ commands will be restricted to the specified admin users.
 Otherwise, _write_ commands are publicly available.
 
-The `.code` file contains the event's edition secret code for NFC cards.
-
 ## Commands
 
 ### _Read_ commands
