@@ -315,7 +315,8 @@ async def enter_points(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
             storage.save()
 
             await update.message.reply_text(
-                f"{player} a été ajouté à l'ANIMATION {anim}."
+                f"👌 {player} a été ajouté à l'ANIMATION {anim} 👌",
+                reply_markup=ReplyKeyboardMarkup(keyboard)
             )
     
     await update.message.reply_text(
@@ -463,7 +464,8 @@ async def register_anim(update, context):
     storage.save()
 
     await update.message.reply_text(
-        f"👌 {player} a été ajouté à l'ANIMATION {anim} avec succès ! 👌\n\nTu peux maintenant lui ajouter des points avec la commande /start."
+        f"👌 {player} a été ajouté à l'ANIMATION {anim} avec succès ! 👌\n\nTu peux maintenant lui ajouter des points avec la commande /start.",
+        reply_markup=ReplyKeyboardRemove()
     )
 
     return ConversationHandler.END
@@ -518,7 +520,7 @@ Tu t'apprêtes à supprimer un JOUEUR de la base de donnée. Ça aura pour effet
         await update.message.reply_text(
             """
 🚨 ATTENTION 🚨
-Tu t'apprêtes à désinscrire un joueur d'une ANIMATION. Ça aura pour effet de supprimer ses points obtenus à l'ANIMATION.
+Tu t'apprêtes à désinscrire un JOUEUR d'une ANIMATION. Ça aura pour effet de supprimer ses points obtenus à l'ANIMATION.
             
 > Quel JOUEUR souhaites-tu désinscrire ?
             """,
@@ -526,7 +528,7 @@ Tu t'apprêtes à désinscrire un joueur d'une ANIMATION. Ça aura pour effet de
         )
         return REMOVE_ANIM_1
     else:
-        await update.message.reply_text("Réponse invalide.", reply_markup=ReplyKeyboardRemove())
+        await update.message.reply_text("❌ Réponse invalide ❌", reply_markup=ReplyKeyboardRemove())
         return ConversationHandler.END
 
 
@@ -535,7 +537,7 @@ async def remove_anim_reply_player(update, context):
 
     if player not in storage.players:
         await update.message.reply_text(
-            f"❌ {player} n'existe pas encore dans la base de donnée. Rien n'a été fait. ❌"
+            f"❌ {player} n'existe pas encore dans la base de donnée. Rien n'a été fait ❌"
         )
         return ConversationHandler.END
 
@@ -555,7 +557,7 @@ async def remove_anim_reply_anim(update, context):
 
     if anim not in storage.anims:
         await update.message.reply_text(
-            f"❌ {player} n'est pas encore inscrit à l'ANIMATION {anim}. Rien a été fait. ❌",
+            f"❌ {player} n'est pas encore inscrit à l'ANIMATION {anim}. Rien a été fait ❌",
             reply_markup=ReplyKeyboardRemove()
         )
     else:
