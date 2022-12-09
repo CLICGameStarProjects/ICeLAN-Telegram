@@ -360,9 +360,11 @@ async def list_anims(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
         message = "🏆 Liste des ANIMATIONS 🏆\n\n"
         message += "\n".join(",  ".join(line) for line in zip(anims[::2], anims[1::2]))
         if len(anims) % 2 == 1:
-            message += f"\n{anims[0]}"
+            if len(anims) > 1:
+                message += "\n"
+            message += anims[0]
     else:
-        message = "❌ Aucune ANIMATION n'a encore été enregistrée ! ❌"
+        message = "❌ Aucune ANIMATION n'a encore été enregistrée ❌"
     await update.message.reply_text(message)
 
 
@@ -400,9 +402,12 @@ async def info(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
                     points = storage.read(player, anim)
                     message = f"[{anim}] {player} - {points}pts"
             else:
-                anims_points = storage.read(player)
-                message = f"🧮 ANIMATIONS et POINTS de {player} 🧮\n\n"
-                message += "\n".join(f"[{a}] {points}pts" for a, points in anims_points.items())
+                anims_points = list(storage.read(player))
+                if len(anims_points):
+                    message = f"🧮 ANIMATIONS et POINTS de {player} 🧮\n\n"
+                    message += "\n".join(f"[{a}] {points}pts" for a, points in anims_points.items())
+                else:
+                    message = f"❌ {player} n'est inscrit à aucune ANIMATION ❌"
     else:
         message = "❌ Il faut spécifier un JOUEUR et (éventuellement) une ANIMATION ❌"
     await update.message.reply_text(message)
