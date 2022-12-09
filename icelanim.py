@@ -495,7 +495,7 @@ async def remove_proceed(update, context):
         return REMOVE_REPLY
 
     else:
-        await update.message_reply(
+        await update.message.text_reply(
             "👌 Annulation de la suppresion. 👌",
             reply_markup=ReplyKeyboardRemove()
         )
@@ -617,7 +617,7 @@ def main() -> None:
         },
         fallbacks=[MessageHandler(filters=filters.COMMAND, callback=cancel)]
     )
-    application.add_handler(points_conv_handler)
+    application.add_handler(points_conv_handler, 0)
 
     register_conv_handler = ConversationHandler(
         entry_points=[CommandHandler("register", register_player)],
@@ -628,7 +628,7 @@ def main() -> None:
         },
         fallbacks=[MessageHandler(filters=filters.COMMAND, callback=cancel)]
     )
-    application.add_handler(register_conv_handler)
+    application.add_handler(register_conv_handler, 1)
 
     remove_conv_handler = ConversationHandler(
         entry_points=[CommandHandler("remove", remove)],
@@ -641,14 +641,14 @@ def main() -> None:
         },
         fallbacks=[MessageHandler(filters=filters.COMMAND, callback=cancel)]
     )
-    application.add_handler(remove_conv_handler)
+    application.add_handler(remove_conv_handler, 2)
 
-    application.add_handler(CommandHandler("players", list_players), 1)
-    application.add_handler(CommandHandler("anims", list_anims), 1)
-    application.add_handler(CommandHandler("info", info), 1)
-    application.add_handler(CommandHandler("status", status), 1)
+    application.add_handler(CommandHandler("players", list_players), 3)
+    application.add_handler(CommandHandler("anims", list_anims), 3)
+    application.add_handler(CommandHandler("info", info), 3)
+    application.add_handler(CommandHandler("status", status), 3)
 
-    application.add_handler(CommandHandler("debug", debug), 1)
+    application.add_handler(CommandHandler("debug", debug), 3)
 
     application.run_polling()
 
