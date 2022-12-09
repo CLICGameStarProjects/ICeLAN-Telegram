@@ -404,7 +404,7 @@ async def info(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
                     points = storage.read(player, anim)
                     message = f"[{anim}] {player} - {points}pts"
             else:
-                anims_points = list(storage.read(player))
+                anims_points = list(storage.read(player).items())
                 if len(anims_points):
                     message = f"🧮 ANIMATIONS et POINTS de {player} 🧮\n\n"
                     message += "\n".join(f"[{a}] {points}pts" for a, points in anims_points)
