@@ -75,7 +75,7 @@ class Storage:
             not isinstance(player, str) or
             anim != None and not isinstance(anim, str)
         ):
-            raise Exception
+            raise TypeError("Expected strings")
 
         if player not in self.players:
             self.players.add(player)
@@ -91,7 +91,7 @@ class Storage:
             not isinstance(player, str) or
             anim != None and not isinstance(anim, str)
         ):
-            raise Exception
+            raise TypeError("Expected strings")
         
         if player in self.players:
             if anim == None:
@@ -109,13 +109,13 @@ class Storage:
             anim != None and not isinstance(anim, str) or
             player != None and not isinstance(player, str)
         ):
-            raise Exception
+            raise TypeError("Expected strings")
 
         if (
             anim != None and anim not in self.anims or
             player != None and player not in self.players
         ):
-            raise Exception
+            raise TypeError("Expected strings")
 
         if anim != None:
             if player != None:
@@ -157,13 +157,12 @@ async def help(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     - renvoie la liste des animations auxquelles est inscrit le joueur, ou
     - renvoie la liste de toutes les animations
 
-/players <animation | None>:
-    - renvoie la liste des joueurs inscrits à une animation, ou
-    - renvoie la liste de tous les joueurs de la base de donnée
-
-/points <animation> <player | None>:
+/points <player> <animation | None>:
     - renvoie la liste des points obtenus par un joueur au sein d'une animation, ou
-    - renvoie la liste des joueurs inscrits à une animation, ainsi que les points qu'ils ont obtenus à l'animation
+    - renvoie la liste des points obtenus par un joueur au sein de toutes les animations
+
+/status <animation>:
+    - renvoie la liste des points obtenus par les joueurs inscrits à l'animation
         """
     )
 
@@ -267,7 +266,7 @@ async def create_anim(update, context):
 
 async def enter_points(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     player = context.user_data["player"]
-    anim = update.message.text
+    anim = update.message.text.strip()
     context.user_data["anim"] = anim
 
     if anim not in storage.storage[player]:
@@ -290,10 +289,11 @@ async def save(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     try:
         points = int(update.message.text)
     except:
-        await update.message.reply_text("Les points doivent être des nombres !")
+        await update.message.reply_text("Les points doivent être des nombres ! Re-rentrer les points :")
+        return SAVE
     player = context.user_data["player"]
     anim = context.user_data["anim"]
-    storage.add(player=player, anim=anim, points=points)
+    storage.add(player, anim, points)
     storage.save()
     await update.message.reply_text(
         f"Les résultats ont été sauvés avec succès !\n\n[{anim}] {player} - {points}pts"
@@ -308,41 +308,46 @@ async def list_anims(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
         message = f"Le joueur {player} est inscrit aux animations suivantes :\n\n" + "\n".join(", ".join(line) for line in zip(anims[::2], anims[1::2]))
     else:
         anims = list(set(a for a_p in storage.storage.values() for a in a_p.keys()))
-        if len(anims) > 0:
+        if len(anims) > 1:
             message = "Liste des animations :\n\n" + "\n".join(", ".join(line) for line in zip(anims[::2], anims[1::2]))
+        elif len(anims) == 1:
+            message = f"Liste des animations :\n\n{anims[0]}"
         else:
             message = "Aucune animation n'a été enregistrée pour le moment."
     await update.message.reply_text(message)
 
 
-async def list_points(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if len(context.args) >= 1:
-        anim = context.args[0]
+async def status(update, context):
+    if len(context.args) > 0:
+        anim = ' '.join(context.args).strip()
         if anim not in storage.anims:
-            message = "L'animation donnée n'a pas encore été enregistrée."
+            message = "L'animation n'a pas encore été enregistrée."
         else:
-            if len(context.args) >= 2:
-                player = context.args[1]
-                points = storage.read(player=player, anim=anim)
-                message = f"[{anim}] {player} - {points}pts"
-            else:
-                players_points = storage.read(anim=anim)
-                message = f"Liste des points pour l'animation {anim}\n\n"
-                message += "\n".join(f"{player} - {points}pts" for player, points in players_points.items())
+            players_points = storage.read(anim=anim)
+            message = f"Liste des points de l'animation {anim}\n\n"
+            message += "\n".join(f"{player} - {points}pts" for player, points in players_points.items())
     else:
-        message = "Il faut spécifier une animation et un joueur (optionnel) !"
+        message = "Il faut spécifier une animation !"
     await update.message.reply_text(message)
 
 
-async def list_players(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if len(context.args) >= 1:
-        anim = context.args[0]
-        if anim in storage.anims:
-            message = f"Joueurs inscrits à l'animation {anim}:\n\n" + "\n".join(p for p in storage.read(anim=anim).keys())
+async def list_points(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if len(context.args) > 0:
+        player = context.args[0]
+        if player not in storage.players:
+            message = "Le joueur n'existe pas encore dans la base de donnée."
         else:
-            message = "L'animation donnée n'a pas encore été enregistrée."
+            if len(context.args) > 1:
+                anim = ' '.join(context.args[1:]).strip()
+                logger.info("anim is", anim)
+                points = storage.read(player, anim)
+                message = f"[{anim}] {player} - {points}pts"
+            else:
+                anims_points = storage.read(player)
+                message = f"Liste des points du joueur {player}\n\n"
+                message += "\n".join(f"[{a}] {points}pts" for a, points in anims_points.items())
     else:
-        message = "Il faut spécifier le nom d'une animation !"
+        message = "Il faut spécifier une animation et un joueur (optionnel) !"
     await update.message.reply_text(message)
 
 
@@ -389,13 +394,13 @@ async def add_anim_reply(update, context):
 
 
 async def register_anim(update, context):
-    anim = update.message.text
+    anim = update.message.text.strip()
     player = context.user_data["register"]
     storage.add(player, anim)
     storage.save()
 
     await update.message.reply_text(
-        f"Le joueur \"{player}\" a été ajouté à l'animation \"{anim}\" avec succès ! Tu peux maintenant lui ajouter des points avec la commande /start."
+        f"Le joueur {player} a été ajouté à l'animation {anim} avec succès ! Tu peux maintenant lui ajouter des points avec la commande /start."
     )
 
     return ConversationHandler.END
@@ -416,7 +421,7 @@ Continuer malgré tout?
 
 async def remove_proceed(update, context):
     if update.message.text.lower() == "oui":
-        keyboard = build_keyboard(["Joueur", "Animation"], 2)
+        keyboard = build_keyboard(["Joueur", "Inscription"], 2)
         await update.message.reply_text(
             "Qu'est-ce que tu voudrais supprimer ?",
             reply_markup=ReplyKeyboardMarkup(keyboard)
@@ -444,7 +449,7 @@ Quel joueur souhtaites-tu supprimer ?
             reply_markup=ReplyKeyboardRemove()
         )
         return REMOVE_PLAYER
-    elif reply == "animation":
+    elif reply == "inscription":
         await update.message.reply_text(
             """
 ATTENTION : Tu t'apprêtes à désinscrire un joueur d'une animation. Ça aura pour effet de supprimer ses points obtenus à l'animation.
@@ -455,6 +460,7 @@ Quel joueur souhaites-tu désinscrire ?
         )
         return REMOVE_ANIM_1
     else:
+        await update.message.reply_text("Réponse invalide.", reply_markup=ReplyKeyboardRemove())
         return ConversationHandler.END
 
 
@@ -462,8 +468,8 @@ async def remove_anim_reply_player(update, context):
     player = update.message.text
 
     if player not in storage.players:
-        await update.mesage.reply_text(
-            f"Le joueur \"{player}\" n'existe pas encore dans la base de donnée. Rien n'a été fait."
+        await update.message.reply_text(
+            f"Le joueur {player} n'existe pas encore dans la base de donnée. Rien n'a été fait."
         )
         return ConversationHandler.END
 
@@ -471,7 +477,7 @@ async def remove_anim_reply_player(update, context):
 
     keyboard = build_keyboard(list(storage.read(player=player).keys()))
     await update.message.reply_text(
-        f"De quelle animation faut-il désincrire \"{player}\" ?",
+        f"De quelle animation faut-il désincrire {player} ?",
         reply_markup=ReplyKeyboardMarkup(keyboard)
     )
 
@@ -483,13 +489,13 @@ async def remove_anim_reply_anim(update, context):
 
     if anim not in storage.anims:
         await update.message.reply_text(
-            f"Le joueur \"{player}\" n'est pas encore inscrit à l'animation \"{anim}\". Rien a été fait.",
+            f"Le joueur {player} n'est pas encore inscrit à l'animation {anim}. Rien a été fait.",
             reply_markup=ReplyKeyboardRemove()
         )
     else:
         storage.remove(player, anim)
         await update.message.reply_text(
-            f"Le joueur \"{player}\" a été désinscrit de l'animation \"{anim}\" avec succès !",
+            f"Le joueur {player} a été désinscrit de l'animation {anim} avec succès !",
             reply_markup=ReplyKeyboardRemove()
         )
 
@@ -501,16 +507,24 @@ async def remove_player_reply(update, context):
 
     if player not in storage.players:
         await update.message.reply_text(
-            f"Le joueur \"{player}\" n'existe pas encore dans la base de donnée. Rien n'a été fait."
+            f"Le joueur {player} n'existe pas encore dans la base de donnée. Rien n'a été fait."
         )
         return ConversationHandler.END
     else:
         storage.remove(player)
         storage.save()
         await update.message.reply_text(
-            f"Le joueur \"{player}\" a été supprimé de la base de donnée avec succès !"
+            f"Le joueur {player} a été supprimé de la base de donnée avec succès !"
         )
 
+    return ConversationHandler.END
+
+
+async def cancel(update, context):
+    await update.message.reply_text(
+        "Tu as entré une commande alors qu'une conversation était en cours. La conversation a donc été interrompue.",
+        reply_markup=ReplyKeyboardRemove()
+    )
     return ConversationHandler.END
 
 
@@ -521,49 +535,51 @@ async def debug(update, context):
 def main() -> None:
     application = Application.builder().token(keys["token"]).build()
 
-    application.add_handler(CommandHandler("help", help))
+    application.add_handler(CommandHandler("help", help), 1)
+
+    conv_filter = filters.TEXT & (~filters.COMMAND)
 
     points_conv_handler = ConversationHandler(
         entry_points=[CommandHandler("start", start)],
         states={
-            ANIM: [MessageHandler(filters=filters.TEXT, callback=pick_anim)],
-            CREATE_ANIM: [MessageHandler(filters=filters.TEXT, callback=create_anim)],
-            POINTS: [MessageHandler(filters=filters.TEXT, callback=enter_points)],
-            SAVE: [MessageHandler(filters=filters.TEXT, callback=save)]
+            ANIM: [MessageHandler(filters=conv_filter, callback=pick_anim)],
+            CREATE_ANIM: [MessageHandler(filters=conv_filter, callback=create_anim)],
+            POINTS: [MessageHandler(filters=conv_filter, callback=enter_points)],
+            SAVE: [MessageHandler(filters=conv_filter, callback=save)]
         },
-        fallbacks=[]
+        fallbacks=[MessageHandler(filters=filters.COMMAND, callback=cancel)]
     )
     application.add_handler(points_conv_handler)
 
     register_conv_handler = ConversationHandler(
         entry_points=[CommandHandler("register", register_player)],
         states={
-            ADD_ANIM: [MessageHandler(filters=filters.TEXT, callback=add_anim)],
-            ADD_ANIM_REPLY: [MessageHandler(filters=filters.TEXT, callback=add_anim_reply)],
-            REGISTER_ANIM: [MessageHandler(filters=filters.TEXT, callback=register_anim)]
+            ADD_ANIM: [MessageHandler(filters=conv_filter, callback=add_anim)],
+            ADD_ANIM_REPLY: [MessageHandler(filters=conv_filter, callback=add_anim_reply)],
+            REGISTER_ANIM: [MessageHandler(filters=conv_filter, callback=register_anim)]
         },
-        fallbacks=[]
+        fallbacks=[MessageHandler(filters=filters.COMMAND, callback=cancel)]
     )
     application.add_handler(register_conv_handler)
 
     remove_conv_handler = ConversationHandler(
         entry_points=[CommandHandler("remove", remove)],
         states={
-            REMOVE_PROCEED: [MessageHandler(filters=filters.TEXT, callback=remove_proceed)],
-            REMOVE_REPLY: [MessageHandler(filters=filters.TEXT, callback=remove_reply)],
-            REMOVE_PLAYER: [MessageHandler(filters=filters.TEXT, callback=remove_player_reply)],
-            REMOVE_ANIM_1: [MessageHandler(filters=filters.TEXT, callback=remove_anim_reply_player)],
-            REMOVE_ANIM_2: [MessageHandler(filters=filters.TEXT, callback=remove_anim_reply_anim)]
+            REMOVE_PROCEED: [MessageHandler(filters=conv_filter, callback=remove_proceed)],
+            REMOVE_REPLY: [MessageHandler(filters=conv_filter, callback=remove_reply)],
+            REMOVE_PLAYER: [MessageHandler(filters=conv_filter, callback=remove_player_reply)],
+            REMOVE_ANIM_1: [MessageHandler(filters=conv_filter, callback=remove_anim_reply_player)],
+            REMOVE_ANIM_2: [MessageHandler(filters=conv_filter, callback=remove_anim_reply_anim)]
         },
-        fallbacks=[]
+        fallbacks=[MessageHandler(filters=filters.COMMAND, callback=cancel)]
     )
     application.add_handler(remove_conv_handler)
 
-    application.add_handler(CommandHandler("anims", list_anims))
-    application.add_handler(CommandHandler("players", list_players))
-    application.add_handler(CommandHandler("points", list_points))
+    application.add_handler(CommandHandler("anims", list_anims), 1)
+    application.add_handler(CommandHandler("points", list_points), 1)
+    application.add_handler(CommandHandler("status", status), 1)
 
-    application.add_handler(CommandHandler("debug", debug))
+    application.add_handler(CommandHandler("debug", debug), 1)
 
     application.run_polling()
 
