@@ -20,7 +20,6 @@ if os.path.exists(".admins"):
 else:
     admins = set()
 
-# Enable logging
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
 )
@@ -180,6 +179,8 @@ async def help(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    if update.message.from_user.id not in admins:
+        return ConversationHandler.END
     if len(context.args) == 1:
         player, code = base64.b64decode(context.args[0]).decode().split()
         if code != keys["code"]:
@@ -416,6 +417,8 @@ async def info(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 
 async def register_player(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.message.from_user.id not in admins:
+        return ConversationHandler.END
     await update.message.reply_text("Entrer le nom du JOUEUR :")
 
     return ADD_ANIM
@@ -472,6 +475,8 @@ async def register_anim(update, context):
 
 
 async def remove(update, context):
+    if update.message.from_user.id not in admins:
+        return ConversationHandler.END
     keyboard = build_keyboard(["Oui", "Non"], 2)
     await update.message.reply_text(
         """
