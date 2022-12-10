@@ -16,7 +16,7 @@ from telegram.ext import (
 
 keys = dict(line.split(",") for line in open(".keys", "r").read().splitlines())
 if os.path.exists(".admins"):
-    admins = set(line for line in open(".admins", "r").read().splitlines())
+    admins = set(int(line) for line in open(".admins", "r").read().splitlines())
 else:
     admins = set()
 
@@ -148,9 +148,23 @@ def build_keyboard(buttons: List[str], n_cols: int) -> List[List[str]]:
 
 
 async def help(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await update.message.reply_text(
-        """
-=== MODIFIER LES DONNÉES ===
+    message = """
+/players
+    Renvoie la liste de tous les joueurs
+
+/anims
+    Renvoie la liste de toutes les animations
+
+/info <player> <animation | None>
+    - Renvoie la liste des points obtenus par un joueur au sein d'une animation, ou
+    - Renvoie la liste des points obtenus par un joueur au sein de toutes les animations
+
+/status <animation>
+    Renvoie la liste des points obtenus par tous les joueurs inscrits à l'animation"""
+    if update.message.from_user.id in admins:
+        message += """
+
+=== COMMANDES RÉSERVÉES AUX ADMINS ===
 
 /start:
     Entrer des points pour un joueur et une animation donnés
@@ -162,20 +176,8 @@ async def help(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 /remove
     - Supprime un joueur de la base de donnée, ou
     - Désinscrit un joueur d'une animation
-
-=== LIRE LES DONNÉES ===
-
-/anims
-    Renvoie la liste de toutes les animations
-
-/info <player> <animation | None>
-    - Renvoie la liste des points obtenus par un joueur au sein d'une animation, ou
-    - Renvoie la liste des points obtenus par un joueur au sein de toutes les animations
-
-/status <animation>
-    Renvoie la liste des points obtenus par tous les joueurs inscrits à l'animation
-        """
-    )
+    """
+    await update.message.reply_text(message)
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
