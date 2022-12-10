@@ -596,6 +596,11 @@ async def cancel(update, context):
 
 
 async def debug(update, context):
+    user = update.message.from_user.id
+    user_id = user.id
+    name = user.first_name + " " + user.last_name
+    username = user.username
+    logger.info(f"CHAT ID: {user_id}\nNAME: {name}\nUSERNAME: @{username}")
     await update.message.reply_text("success", reply_markup=ReplyKeyboardRemove())
 
 
