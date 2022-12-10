@@ -596,7 +596,7 @@ async def cancel(update, context):
 
 
 async def debug(update, context):
-    user = update.message.from_user.id
+    user = update.message.from_user
     user_id = user.id
     name = user.first_name + " " + user.last_name
     username = user.username
